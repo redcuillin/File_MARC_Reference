@@ -17,7 +17,7 @@ class File_MARC_Reference_CacheTest extends TestCase
     protected $record;
     protected $cache;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->cache = new File_MARC_Reference_Cache();
         if (false === ($this->record instanceof \File_MARC_Record)) {

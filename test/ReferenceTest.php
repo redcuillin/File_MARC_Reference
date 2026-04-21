@@ -17,7 +17,7 @@ class File_MARC_ReferenceTest extends TestCase
 {
     protected $record;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         if (false === ($this->record instanceof \File_MARC_Record)) {
             // Retrieve a set of MARC records from a file

@@ -90,7 +90,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      * @param FieldInterface    $fieldspec    Datas field spec
      * @param SubfieldInterface $subfieldspec Datas subfield spec
      *
-     * @return array[File_MARC_Field|File_MARC_Subfield] Array of data
+     * @return array<int, File_MARC_Field|File_MARC_Subfield> Array of data
      */
     public function getData(CK\MARCspec\FieldInterface $fieldspec, CK\MARCspec\SubfieldInterface $subfieldspec = null)
     {
@@ -100,11 +100,11 @@ class File_MARC_Reference_Cache implements ArrayAccess
 
         $fieldBase = $fieldspec->getBaseSpec();
         if (!is_null($subfieldspec)) {
-            $key = $fieldBase.$subfieldspec->getBaseSpec();
+            $key = $fieldBase . $subfieldspec->getBaseSpec();
             if (array_key_exists($key, $this->data)) {
                 return $this->data[$key];
             }
-            $key = $fieldBase.'$'.$subfieldspec->getTag();
+            $key = $fieldBase . '$' . $subfieldspec->getTag();
             if (array_key_exists($key, $this->data)) {
                 return array_values($this->sliceData($key, $subfieldspec));
             }
@@ -130,7 +130,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      * @param string                           $key  The datas key
      * @param FieldInterface|SubfieldInterface $spec Spec with slice information
      *
-     * @return array[File_MARC_Field|File_MARC_Subfield]
+     * @return array<int, File_MARC_Field|File_MARC_Subfield>
      */
     private function sliceData($key, $spec)
     {
@@ -160,7 +160,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      * @param FieldInterface|SubfieldInterface          $spec  The corresponding spec
      * @param array[File_MARC_Field|File_MARC_Subfield] $value The value to reference
      *
-     * @return array[string] Array of referenced data content
+     * @return array<int, string> Array of referenced data content
      */
     public function getContents($spec, array $value = [])
     {
@@ -214,7 +214,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * @abstracting ArrayAccess
      */
-    public function offsetSet($key, $value)
+    public function offsetSet($key, $value): void
     {
         $this->setData("$key", $value);
     }
@@ -228,7 +228,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * @abstracting ArrayAccess
      */
-    public function offsetExists($key)
+    public function offsetExists($key): bool
     {
         return array_key_exists("$key", $this->data);
     }
@@ -241,7 +241,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * @abstracting ArrayAccess
      */
-    public function offsetUnset($key)
+    public function offsetUnset($key): void
     {
         unset($this->data["$key"]);
     }
@@ -251,11 +251,11 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * @param string $key The offset to retrieve
      *
-     * @return array[File_MARC_Field|File_MARC_Subfield]
+     * @return array<int, File_MARC_Field|File_MARC_Subfield>
      *
      * @abstracting ArrayAccess
      */
-    public function offsetGet($key)
+    public function offsetGet($key): mixed
     {
         $key = "$key";
         if (array_key_exists($key, $this->data)) {
@@ -270,7 +270,7 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * @param string $name The property name
      *
-     * @return array[File_MARC_Field|File_MARC_Subfield]
+     * @return array<int, File_MARC_Field|File_MARC_Subfield>
      */
     public function __get($name)
     {
