@@ -8,37 +8,41 @@ class File_MARC_Reference
     protected $record;
 
     /**
-     * @var string|MARCspecInterface The MARCspec
+     * Normalized MARCspec (constructor input may be a string; this is always the parsed object).
+     *
+     * @var CK\MARCspec\MARCspec
      */
     protected $spec;
 
     /**
-     * @var File_MARC_Field The current field
+     * Current field while iterating (leader may be a string).
+     *
+     * @var File_MARC_Field|File_MARC_Data_Field|string|null
      */
     private $field;
 
     /**
-     *  @var string The base field spec as string
+     * @var string The base field spec as string
      */
     private $baseSpec;
 
     /**
-     *  @var MARCspecInterface The current marc spec
+     * @var CK\MARCspec\MARCspec The current marc spec
      */
     private $currentSpec;
 
     /**
-     *  @var SubfieldInterface The current subfield spec
+     * @var CK\MARCspec\SubfieldInterface|null The current subfield spec
      */
     private $currentSubfieldSpec;
 
     /**
-     *  @var SubSpecInterface The current subspec
+     * @var CK\MARCspec\SubSpecInterface|null The current subspec
      */
     private $currentSubSpec;
 
     /**
-     * @var array[File_MARC_Field] Array of fields
+     * @var array<int, File_MARC_Field|string> Array of fields (leader entries are strings)
      */
     private $fields = [];
 
@@ -48,7 +52,7 @@ class File_MARC_Reference
     protected $cache;
 
     /**
-     * @var array[FieldInterface|SubfieldInterface] Array of referenced data
+     * @var array<int, File_MARC_Field|File_MARC_Subfield|string> Referenced MARC values
      */
     protected $data = [];
 
@@ -60,11 +64,11 @@ class File_MARC_Reference
     /**
      * Constructor.
      *
-     * @param string|MARCspecInterface $spec   The MARCspec
-     * @param File_MARC_Record         $record The MARC record
-     * @param array                    $cache  Associative array of chache data
+     * @param string|CK\MARCspec\MARCspecInterface $spec   The MARCspec
+     * @param File_MARC_Record                       $record The MARC record
+     * @param File_MARC_Reference_Cache|null       $cache  Optional shared cache instance
      */
-    public function __construct($spec, File_MARC_Record $record, $cache = null)
+    public function __construct($spec, File_MARC_Record $record, ?File_MARC_Reference_Cache $cache = null)
     {
         $this->record = $record;
 
@@ -182,7 +186,7 @@ class File_MARC_Reference
             return $fieldIndex; // iteration of field index will continue
         }
         $specTag = $this->currentSpec['field']->getTag();
-        if (preg_match('/'.$specTag.'/', $tag)) {
+        if (preg_match('/' . $specTag . '/', $tag)) {
             // not same field tag, but field spec tag matches
             return $fieldIndex; // iteration of field index will continue
         }
@@ -193,13 +197,13 @@ class File_MARC_Reference
     /**
      * Iterate on subspecs.
      *
-     * @param array $subSpecs      Array of subspecs
-     * @param int   $fieldIndex    The current field index
-     * @param int   $subfieldIndex The current subfield index
+     * @param array<int, mixed> $subSpecs      Array of subspecs
+     * @param int               $fieldIndex    The current field index
+     * @param int|null          $subfieldIndex The current subfield index
      *
      * @return bool The validation result
      */
-    private function iterateSubSpec($subSpecs, $fieldIndex, $subfieldIndex = null)
+    private function iterateSubSpec(array $subSpecs, int $fieldIndex, ?int $subfieldIndex = null)
     {
         $valid = true;
         foreach ($subSpecs as $_subSpec) {
@@ -227,11 +231,10 @@ class File_MARC_Reference
      * Sets the start and end index of the current spec
      * if it's an instance of CK\MARCspec\PositionOrRangeInterface.
      *
-     * @param object $spec          The current spec
-     * @param int    $fieldIndex    the start/end index to set
-     * @param int    $subfieldIndex the start/end index to set
+     * @param int      $fieldIndex    The start/end index to set on the field
+     * @param int|null $subfieldIndex The start/end index to set on nested subfields, if any
      */
-    private function setIndexStartEnd($fieldIndex, $subfieldIndex = null)
+    private function setIndexStartEnd(int $fieldIndex, ?int $subfieldIndex = null)
     {
         foreach (['leftSubTerm', 'rightSubTerm'] as $side) {
             if (!($this->currentSubSpec[$side] instanceof CK\MARCspec\ComparisonStringInterface)) {
@@ -303,67 +306,69 @@ class File_MARC_Reference
         $validation = false;
 
         switch ($this->currentSubSpec['operator']) {
-        case '=':
-            if (0 < count(array_intersect($leftSubTerm, $rightSubTerm))) {
-                $validation = true;
-            }
-            break;
+            case '=':
+                if (0 < count(array_intersect($leftSubTerm, $rightSubTerm))) {
+                    $validation = true;
+                }
+                break;
 
-        case '!=':
-            if (0 < count(array_diff($leftSubTerm, $rightSubTerm))) {
-                $validation = true;
-            }
-            break;
+            case '!=':
+                if (0 < count(array_diff($leftSubTerm, $rightSubTerm))) {
+                    $validation = true;
+                }
+                break;
 
-        case '~':
-            if (0 < count(
-                array_uintersect(
-                    $leftSubTerm,
-                    $rightSubTerm,
-                    function ($v1, $v2) {
-                        if (strpos($v1, $v2) !== false) {
-                            return 0;
-                        }
+            case '~':
+                if (
+                    0 < count(
+                        array_uintersect(
+                            $leftSubTerm,
+                            $rightSubTerm,
+                            function ($v1, $v2) {
+                                if (strpos($v1, $v2) !== false) {
+                                    return 0;
+                                }
 
-                        return -1;
-                    }
-                )
-            )
-            ) {
-                $validation = true;
-            }
-            break;
+                                return -1;
+                            }
+                        )
+                    )
+                ) {
+                    $validation = true;
+                }
+                break;
 
-        case '!~':
-            if (0 < count(
-                array_uintersect(
-                    $leftSubTerm,
-                    $rightSubTerm,
-                    function ($v1, $v2) {
-                        if (strpos($v1, $v2) === false) {
-                            return 0;
-                        }
+            case '!~':
+                if (
+                    0 < count(
+                        array_uintersect(
+                            $leftSubTerm,
+                            $rightSubTerm,
+                            function ($v1, $v2) {
+                                if (strpos($v1, $v2) === false) {
+                                    return 0;
+                                }
 
-                        return -1;
-                    }
-                )
-            )
-            ) {
-                $validation = true;
-            }
-            break;
+                                return -1;
+                            }
+                        )
+                    )
+                ) {
+                    $validation = true;
+                }
+                break;
 
-        case '?':
-            if ($rightSubTerm) {
-                $validation = true;
-            }
-            break;
+            case '?':
+                if ($rightSubTerm) {
+                    $validation = true;
+                }
+                break;
 
-        case '!':
-            if (!$rightSubTerm) {
-                $validation = true;
-            }
-            break;
+            case '!':
+                if (!$rightSubTerm) {
+                    $validation = true;
+                }
+                break;
         }
 
         $this->cache->validation($this->currentSubSpec, $validation);
@@ -448,16 +453,20 @@ class File_MARC_Reference
     /**
      * Reference subfield contents and filter by index.
      *
-     * @param SubfieldInterface $currentSubfieldSpec The current subfield spec
+     * @param CK\MARCspec\SubfieldInterface $currentSubfieldSpec The current subfield spec
      *
-     * @return array An array of referenced subfields
+     * @return array<int, File_MARC_Subfield> An array of referenced subfields
      */
-    private function referenceSubfields($currentSubfieldSpec)
+    private function referenceSubfields(CK\MARCspec\SubfieldInterface $currentSubfieldSpec)
     {
-        $baseSubfieldSpec = $this->baseSpec.$currentSubfieldSpec->getBaseSpec();
+        $baseSubfieldSpec = $this->baseSpec . $currentSubfieldSpec->getBaseSpec();
 
         if ($subfields = $this->cache->getData($this->currentSpec['field'], $currentSubfieldSpec)) {
             return $subfields;
+        }
+
+        if (!($this->field instanceof File_MARC_Data_Field)) {
+            return [];
         }
 
         $_subfields = $this->field->getSubfields($currentSubfieldSpec['tag']);
@@ -492,12 +501,12 @@ class File_MARC_Reference
     /**
      * Calculates a range from indexStart and indexEnd.
      *
-     * @param array $spec  The spec with possible indizes
-     * @param int   $total Total count of (sub)fields
+     * @param CK\MARCspec\FieldInterface|CK\MARCspec\SubfieldInterface $spec  The spec with possible indizes
+     * @param int                                                      $total Total count of (sub)fields
      *
-     * @return array The range of indizes
+     * @return array<int, int> The range of indizes
      */
-    private function getIndexRange($spec, $total)
+    private function getIndexRange($spec, int $total)
     {
         $lastIndex = $total - 1;
         $indexStart = $spec['indexStart'];
@@ -545,15 +554,15 @@ class File_MARC_Reference
     public function __get($name)
     {
         switch ($name) {
-        case 'data':
-            return $this->data;
-            break;
-        case 'content':
-            return $this->content;
-            break;
-        case 'cache':
-            return $this->cache;
-            break;
+            case 'data':
+                return $this->data;
+                break;
+            case 'content':
+                return $this->content;
+                break;
+            case 'cache':
+                return $this->cache;
+                break;
         }
     }
 }

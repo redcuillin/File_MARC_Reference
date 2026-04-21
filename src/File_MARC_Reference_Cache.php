@@ -87,12 +87,12 @@ class File_MARC_Reference_Cache implements ArrayAccess
      *
      * Extract data from $this->data depending on provided specs
      *
-     * @param FieldInterface    $fieldspec    Datas field spec
-     * @param SubfieldInterface $subfieldspec Datas subfield spec
+     * @param FieldInterface           $fieldspec    Datas field spec
+     * @param SubfieldInterface|null   $subfieldspec Datas subfield spec
      *
      * @return array<int, File_MARC_Field|File_MARC_Subfield> Array of data
      */
-    public function getData(CK\MARCspec\FieldInterface $fieldspec, CK\MARCspec\SubfieldInterface $subfieldspec = null)
+    public function getData(CK\MARCspec\FieldInterface $fieldspec, ?CK\MARCspec\SubfieldInterface $subfieldspec = null)
     {
         if (!$this->data) {
             return [];
@@ -164,8 +164,14 @@ class File_MARC_Reference_Cache implements ArrayAccess
      */
     public function getContents($spec, array $value = [])
     {
-        if (!$value) {
-            $value = $this->getData("$spec");
+        if ($value === []) {
+            if ($spec instanceof CK\MARCspec\FieldInterface) {
+                $value = $this->getData($spec);
+            } elseif ($spec instanceof CK\MARCspec\SubfieldInterface) {
+                $value = $this->offsetGet((string) $spec);
+            } else {
+                $value = [];
+            }
         }
         $substring = false;
         $charStart = null;
