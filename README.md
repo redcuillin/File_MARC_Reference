@@ -1,3 +1,29 @@
+## Fork (redcuillin)
+
+Created to update this code and keep it usable on PHP 8.4.
+
+Initial objective is to replace the large number of deprecation warnings likely to be thrown.
+
+### Using this fork with Composer
+
+Add the following to your `composer.json` `repositories` and `require` sections (merge with existing entries as needed):
+
+```json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/redcuillin/File_MARC_Reference"
+    }
+],
+"require": {
+    "ck/file_marc_reference": "dev-master as 1.999.0"
+}
+```
+
+-----
+
+## Upstream readme:
+
 # File_MARC_Reference
 
 [![Build Status](https://travis-ci.org/MARCspec/File_MARC_Reference.svg?branch=master)](https://travis-ci.org/MARCspec/File_MARC_Reference) [![Coverage Status](https://coveralls.io/repos/github/MARCspec/File_MARC_Reference/badge.svg?branch=master)](https://coveralls.io/github/MARCspec/File_MARC_Reference?branch=master)
